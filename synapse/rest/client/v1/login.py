@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import re
 import xml.etree.ElementTree as ET
 
 from six.moves import urllib
@@ -533,6 +534,26 @@ class SAMLRedirectServlet(BaseSSORedirectServlet):
         return self._saml_handler.handle_redirect_request(client_redirect_url)
 
 
+class SSORedirectConfirmServlet(RestServlet):
+    PATTERNS = [re.compile("^/_synapse/client/login/sso/redirect/confirm")]
+
+    def __init__(self, hs):
+        super(SSORedirectConfirmServlet, self).__init__()
+
+        from synapse.push.mailer import load_jinja2_templates
+        # This code servlet is only registered if the "redirect_confirm_enabled" flag
+        # from the SSO config is enabled so we can safely assume that the related options
+        # are defined.
+        self._template = load_jinja2_templates(
+            hs.config.sso_redirect_confirm_template_dir,
+            [hs.config.sso_redirect_confirm_template_file],
+        )[0]
+
+    def on_GET(self, request):
+        redirect_url = request.args["redirect_url"][0]
+        return self._template.render(redirect_url=redirect_url)
+
+
 class SSOAuthHandler(object):
     """
     Utility class for Resources and Servlets which handle the response from a SSO
@@ -618,3 +639,5 @@ def register_servlets(hs, http_server):
         CasTicketServlet(hs).register(http_server)
     elif hs.config.saml2_enabled:
         SAMLRedirectServlet(hs).register(http_server)
+    if hs.config.sso_redirect_confirm_enabled:
+        SSORedirectConfirmServlet(hs).register(http_server)
