@@ -41,7 +41,6 @@ from synapse.api.errors import (
     FederationDeniedError,
     FederationError,
     RequestSendFailed,
-    StoreError,
     SynapseError,
 )
 from synapse.api.room_versions import KNOWN_ROOM_VERSIONS, RoomVersion, RoomVersions
@@ -61,6 +60,7 @@ from synapse.replication.http.devices import ReplicationUserDevicesResyncRestSer
 from synapse.replication.http.federation import (
     ReplicationCleanRoomRestServlet,
     ReplicationFederationSendEventsRestServlet,
+    ReplicationStoreRoomOnInviteRestServlet,
 )
 from synapse.replication.http.membership import ReplicationUserJoinedLeftRoomRestServlet
 from synapse.state import StateResolutionStore, resolve_events_with_store
@@ -161,8 +161,12 @@ class FederationHandler(BaseHandler):
             self._user_device_resync = ReplicationUserDevicesResyncRestServlet.make_client(
                 hs
             )
+            self._maybe_store_room_on_invite = ReplicationStoreRoomOnInviteRestServlet.make_client(
+                hs
+            )
         else:
             self._device_list_updater = hs.get_device_handler().device_list_updater
+            self._maybe_store_room_on_invite = self.store.maybe_store_room_on_invite
 
         # When joining a room we need to queue any events for that room up
         self.room_queues = {}
@@ -706,28 +710,6 @@ class FederationHandler(BaseHandler):
             context = await self._handle_new_event(origin, event, state=state)
         except AuthError as e:
             raise FederationError("ERROR", e.code, e.msg, affected=event.event_id)
-
-        room = await self.store.get_room(room_id)
-
-        if not room:
-            try:
-                prev_state_ids = await context.get_prev_state_ids()
-                create_event = await self.store.get_event(
-                    prev_state_ids[(EventTypes.Create, "")]
-                )
-
-                room_version_id = create_event.content.get(
-                    "room_version", RoomVersions.V1.identifier
-                )
-
-                await self.store.store_room(
-                    room_id=room_id,
-                    room_creator_user_id="",
-                    is_public=False,
-                    room_version=KNOWN_ROOM_VERSIONS[room_version_id],
-                )
-            except StoreError:
-                logger.exception("Failed to store room.")
 
         if event.type == EventTypes.Member:
             if event.membership == Membership.JOIN:
@@ -1323,16 +1305,18 @@ class FederationHandler(BaseHandler):
 
             logger.debug("do_invite_join event: %s", event)
 
-            try:
-                await self.store.store_room(
-                    room_id=room_id,
-                    room_creator_user_id="",
-                    is_public=False,
-                    room_version=room_version_obj,
-                )
-            except Exception:
-                # FIXME
-                pass
+            # if this is the first time we've joined this room, it's time to add
+            # a row to `rooms` with the correct room version. If there's already a
+            # row there, we should override it, since it may have been populated
+            # based on an invite request which lied about the room version.
+            #
+            # federation_client.send_join has already checked that the room
+            # version in the received create event is the same as room_version_obj,
+            # so we can rely on it now.
+            #
+            await self.store.upsert_room_on_join(
+                room_id=room_id, room_version=room_version_obj,
+            )
 
             await self._persist_auth_tree(
                 origin, auth_chain, state, event, room_version_obj
@@ -1557,6 +1541,13 @@ class FederationHandler(BaseHandler):
         # block any attempts to invite the server notices mxid
         if event.state_key == self._server_notices_mxid:
             raise SynapseError(http_client.FORBIDDEN, "Cannot invite this user")
+
+        # keep a record of the room version, if we don't yet know it.
+        # (this may get overwritten if we later get a different room version in a
+        # join dance).
+        await self._maybe_store_room_on_invite(
+            room_id=event.room_id, room_version=room_version
+        )
 
         event.internal_metadata.outlier = True
         event.internal_metadata.out_of_band_membership = True
