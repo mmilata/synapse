@@ -189,6 +189,7 @@ class SynapseHomeServer(HomeServer):
                     "/_matrix/client/versions": client_resource,
                     "/.well-known/matrix/client": WellKnownResource(self),
                     "/_synapse/admin": AdminRestResource(self),
+                    "/_synapse/client": client_resource,
                 }
             )
 

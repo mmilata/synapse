@@ -490,7 +490,10 @@ class GenericWorkerServer(HomeServer):
 
                     groups.register_servlets(self, resource)
 
-                    resources.update({CLIENT_API_PREFIX: resource})
+                    resources.update({
+                        CLIENT_API_PREFIX: resource,
+                        "/_synapse/client": resource,
+                    })
                 elif name == "federation":
                     resources.update({FEDERATION_PREFIX: TransportLayerServer(self)})
                 elif name == "media":
