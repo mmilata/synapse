@@ -2,9 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SSO redirect check</title>
+    <title>SSO redirect confirmation</title>
 </head>
-<body>
-{{ redirect_url }}
-</body>
+    <body>
+        <p><span id="origin"></span> is requesting full access to your Matrix account.</p>
+
+        <p>If you don't recognise this address, you should ignore this and close this tab.</p>
+
+        <button id="confirm_button">I trust this address</button>
+
+        <script type="text/javascript">
+            const u = new URL("{{ redirect_url }}");
+            document.getElementById("origin").innerHTML = u.origin;
+            document.getElementById("confirm_button").onclick = () => {window.location = u.href}
+        </script>
+    </body>
 </html>
