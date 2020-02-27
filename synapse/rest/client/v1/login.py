@@ -636,8 +636,8 @@ class SSOAuthHandler(object):
         login_token = self._macaroon_gen.generate_short_term_login_token(
             registered_user_id
         )
-        redirect_url = self._add_login_token_to_redirect_url(
-            client_redirect_url, login_token
+        redirect_url = self._add_query_param_to_url(
+            client_redirect_url, "loginToken", login_token
         )
 
         if self._sso_redirect_confirm_enabled:
@@ -645,21 +645,19 @@ class SSOAuthHandler(object):
             # redirect to with the correct endpoint, appending the redirect URL to it as
             # a query parameter.
             confirm_url = "%s/_synapse/client/login/sso/redirect/confirm" % self._base_url
-            url_parts = list(urllib.parse.urlparse(confirm_url))
-            query = dict(urllib.parse.parse_qsl(url_parts[4]))
-            query.update({"redirect_url": redirect_url})
-            url_parts[4] = urllib.parse.urlencode(query)
-            redirect_url = urllib.parse.urlunparse(url_parts)
+            redirect_url = self._add_query_param_to_url(
+                confirm_url, "redirect_url", redirect_url,
+            )
 
         # Load page
         request.redirect(redirect_url)
         finish_request(request)
 
     @staticmethod
-    def _add_login_token_to_redirect_url(url, token):
+    def _add_query_param_to_url(url, param_name, param):
         url_parts = list(urllib.parse.urlparse(url))
         query = dict(urllib.parse.parse_qsl(url_parts[4]))
-        query.update({"loginToken": token})
+        query.update({param_name: param})
         url_parts[4] = urllib.parse.urlencode(query)
         return urllib.parse.urlunparse(url_parts)
 
