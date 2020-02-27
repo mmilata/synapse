@@ -32,6 +32,7 @@ WEB_CLIENT_PREFIX = "/_matrix/client"
 SERVER_KEY_V2_PREFIX = "/_matrix/key/v2"
 MEDIA_PREFIX = "/_matrix/media/r0"
 LEGACY_MEDIA_PREFIX = "/_matrix/media/v1"
+SYNAPSE_CLIENT_PREFIX = "/_synapse/client"
 
 
 class ConsentURIBuilder(object):

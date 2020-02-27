@@ -31,6 +31,7 @@ from synapse.api.urls import (
     LEGACY_MEDIA_PREFIX,
     MEDIA_PREFIX,
     SERVER_KEY_V2_PREFIX,
+    SYNAPSE_CLIENT_PREFIX,
 )
 from synapse.app import _base
 from synapse.config._base import ConfigError
@@ -492,7 +493,7 @@ class GenericWorkerServer(HomeServer):
 
                     resources.update({
                         CLIENT_API_PREFIX: resource,
-                        "/_synapse/client": resource,
+                        SYNAPSE_CLIENT_PREFIX: resource,
                     })
                 elif name == "federation":
                     resources.update({FEDERATION_PREFIX: TransportLayerServer(self)})

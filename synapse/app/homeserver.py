@@ -45,6 +45,7 @@ from synapse.api.urls import (
     MEDIA_PREFIX,
     SERVER_KEY_V2_PREFIX,
     STATIC_PREFIX,
+    SYNAPSE_CLIENT_PREFIX,
     WEB_CLIENT_PREFIX,
 )
 from synapse.app import _base
@@ -186,7 +187,7 @@ class SynapseHomeServer(HomeServer):
                     CLIENT_API_PREFIX: client_resource,
                     "/.well-known/matrix/client": WellKnownResource(self),
                     "/_synapse/admin": AdminRestResource(self),
-                    "/_synapse/client": client_resource,
+                    SYNAPSE_CLIENT_PREFIX: client_resource,
                 }
             )
 
