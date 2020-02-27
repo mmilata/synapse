@@ -585,6 +585,8 @@ class SSOAuthHandler(object):
         self._auth_handler = hs.get_auth_handler()
         self._registration_handler = hs.get_registration_handler()
         self._macaroon_gen = hs.get_macaroon_generator()
+        self._sso_redirect_confirm_enabled = hs.config.sso_redirect_confirm_enabled
+        self._base_url = hs.config.public_baseurl
 
     async def on_successful_auth(
         self, username, request, client_redirect_url, user_display_name=None
@@ -637,6 +639,18 @@ class SSOAuthHandler(object):
         redirect_url = self._add_login_token_to_redirect_url(
             client_redirect_url, login_token
         )
+
+        if self._sso_redirect_confirm_enabled:
+            # If the confirmation step before redirecting is enabled, replace the URL to
+            # redirect to with the correct endpoint, appending the redirect URL to it as
+            # a query parameter.
+            confirm_url = "%s/_synapse/client/login/sso/redirect/confirm" % self._base_url
+            url_parts = list(urllib.parse.urlparse(confirm_url))
+            query = dict(urllib.parse.parse_qsl(url_parts[4]))
+            query.update({"redirect_url": redirect_url})
+            url_parts[4] = urllib.parse.urlencode(query)
+            redirect_url = urllib.parse.urlunparse(url_parts)
+
         # Load page
         request.redirect(redirect_url)
         finish_request(request)

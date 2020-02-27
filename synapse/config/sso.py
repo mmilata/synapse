@@ -15,7 +15,7 @@
 import pkg_resources
 from typing import Any, Dict, Optional
 
-from ._base import Config
+from ._base import Config, ConfigError
 
 
 class SSOConfig(Config):
@@ -29,6 +29,11 @@ class SSOConfig(Config):
             self.sso_redirect_confirm_enabled = sso_config.get(
                 "redirect_confirm_enabled", False,
             )
+
+            if self.sso_redirect_confirm_enabled and "public_baseurl" not in config:
+                raise ConfigError(
+                    "Can't set up redirect confirmation without 'public_baseurl'"
+                )
 
             template_dir = config.get("template_dir")
 
