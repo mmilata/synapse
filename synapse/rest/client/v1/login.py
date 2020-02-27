@@ -15,6 +15,7 @@
 
 import logging
 import re
+from typing import List, Union
 import xml.etree.ElementTree as ET
 
 from six.moves import urllib
@@ -550,8 +551,24 @@ class SSORedirectConfirmServlet(RestServlet):
         )[0]
 
     def on_GET(self, request):
-        redirect_url = request.args["redirect_url"][0]
-        return self._template.render(redirect_url=redirect_url)
+        # Give an empty string to the template if the redirect_url couldn't be found in
+        # the query parameters.
+        redirect_url = request.args.get(b"redirect_url", b"")  # type: Union[List, bytes]
+        if isinstance(redirect_url, list):
+            # If the query parameter exists, it's in a list, because it's allowed to
+            # mention the same parameter several time in the query parameters, so we need
+            # to extract the first value.
+            redirect_url = redirect_url[0]  # type: bytes
+
+        html = self._template.render(
+            redirect_url=redirect_url.decode("utf8"),
+        )  # type: str
+
+        request.setResponseCode(200)
+        request.setHeader(b"Content-Type", b"text/html; charset=utf-8")
+        request.setHeader(b"Content-Length", b"%d" % (len(html),))
+        request.write(html.encode("utf8"))
+        finish_request(request)
 
 
 class SSOAuthHandler(object):
