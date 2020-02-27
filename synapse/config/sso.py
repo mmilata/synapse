@@ -61,7 +61,7 @@ class SSOConfig(Config):
         #   # The directory in which to find the template to serve in that extra
         #   # confirmation step.
         #   # Defaults to res/templates.
-        #   # 
+        #   #
         #   template_dir: "res/templates"
         #
         #   # The template to serve in that extra confirmation step.
