@@ -550,6 +550,8 @@ class SSORedirectConfirmServlet(RestServlet):
             [hs.config.sso_redirect_confirm_template_file],
         )[0]
 
+        self._server_name = hs.config.server_name
+
     def on_GET(self, request):
         # Give an empty string to the template if the redirect_url couldn't be found in
         # the query parameters.
@@ -562,6 +564,7 @@ class SSORedirectConfirmServlet(RestServlet):
 
         html = self._template.render(
             redirect_url=redirect_url.decode("utf8"),
+            server_name=self._server_name,
         )  # type: str
 
         request.setResponseCode(200)

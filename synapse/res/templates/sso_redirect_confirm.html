@@ -5,16 +5,25 @@
     <title>SSO redirect confirmation</title>
 </head>
     <body>
-        <p><span id="origin"></span> is requesting full access to your Matrix account.</p>
-
-        <p>If you don't recognise this address, you should ignore this and close this tab.</p>
-
-        <button id="confirm_button">I trust this address</button>
-
         <script type="text/javascript">
-            const u = new URL("{{ redirect_url }}");
-            document.getElementById("origin").innerHTML = u.origin;
-            document.getElementById("confirm_button").onclick = () => {window.location = u.href}
+            const redirect_url = "{{ redirect_url }}";
+
+            // Check whether we actually got a URL to redirect to.
+            if (redirect_url.length === 0) {
+                // Display an error message if we don't have one.
+                document.body.innerHTML = `
+                    <p>Error: The redirect URL is empty.</p>
+                    <p>Please <a href="https://github.com/matrix-org/synapse/issues">report this issue</a>.</p>
+                `;
+            } else {
+                //
+                const u = new URL(redirect_url);
+                document.body.innerHTML = `
+                    <p>The application at <span style="font-weight:bold">${u.origin}</span> is requesting full access to your <span style="font-weight:bold">{{ server_name }}</span> Matrix account.</p>
+                    <p>If you don't recognise this address, you should ignore this and close this tab.</p>
+                    <button onclick="window.location = '${u.href}'">I trust this address</button>
+                `;
+            }
         </script>
     </body>
 </html>
